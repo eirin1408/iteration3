@@ -1,14 +1,13 @@
+
 /* 
  * Parts of this code is taken from miguelbalboa @ gitgithub.com/miguelbalboa
  * who has made the MFRC522 library
  *
  * version 0.2
  */
-
 #include <SPI.h>
 #include <MFRC522.h>
-#include <TimerOne.h>
-#include <Volume3.h>
+
 
 /* define pin numbers for RGB LED  */
 const int RED_LED_PIN = A5;
@@ -16,7 +15,7 @@ const int GREEN_LED_PIN = A4;
 const int BLUE_LED_PIN = A3;
 
 /*Setting brightness of green pin* 100% = 255, 75% = 191, 50% = 127, 25% = 64 */
-int green_bright = 191;
+int green_bright = 130;
 
 
 /* define pin numbers */
@@ -54,7 +53,7 @@ void loop()
 
   read_rfid();
 
-  setVolume();
+//  setVolume();
 
 }
 
