@@ -1,8 +1,18 @@
+/* Raspbian jessi having problems loading albums(arrays) over 4 files. 
+Parts of this code is written by Ovar, my brother. 
+*/
+
+import ddf.minim.*;
+import ddf.minim.analysis.*;
+import ddf.minim.effects.*;
+import ddf.minim.signals.*;
+import ddf.minim.spi.*;
+import ddf.minim.ugens.*;
+import processing.sound.*;
 import gohai.glvideo.*;
 import processing.serial.*;
 import processing.video.*;
-import ddf.minim.*;
-
+import java.awt.geom.Point2D;
 
 /* global variables */
 Serial serialPort;
@@ -10,8 +20,14 @@ String serialInput;
 Minim minim;
 AudioController audioController;
 VideoController videoController;
+GLMovie activeVideo;
+GLMovie askepottVideo;
+GLMovie hermanVideo;
+GLMovie annieVideo;
+GLMovie havfrueVideo;
+GLMovie vol;
+//GLMovie olsenVideo;
 
-Movie activeVideo;
 
 void setup() {
     PApplet parent = this;
@@ -31,28 +47,44 @@ void setup() {
     /* initialize audioController */
     audioController = new AudioController();
     videoController = new VideoController(parent);
-
-
     
-    /* testing */
-  //  videoController.loadVideo("shameless"); 
+    /* init videos */
+    askepottVideo = new GLMovie(this, "video/askepott.m4v");
+    hermanVideo = new GLMovie(this, "video/herman.m4v");
+    annieVideo = new GLMovie(this, "video/annie.mp4");
+    havfrueVideo = new GLMovie(this, "video/lilleHavfruen.m4v");
+   // olsenVideo = new GLMovie(this, "video/olsenbandenJrGUV.mp4");
    
+   /* init albums */
+    
+    /* testing ||
+    *følgende setning loader og spiller film (på raspbian) uten problem, 
+    *men når jeg kommenterer den ut for å benytte meg av serial read og switch case 
+    *for loading av film, får jeg følgende error: GLVideo requires the P2D or P3D renderer.
+    *P2D setter jeg i size() i setup. Ifølge processing på size() komme på første linje i setup(),
+    *samt setup() kjører bare én gang. Hva skjer her? Må switch case flyttes inn i setup()? 
+    *Og er det i det hele tatt mulig? ka du tru?
+    *
+    *For øvrig bruker jeg GLvideo på raspbian, mens jeg fikk 
+    *processing sitt video-bibliotek til å fungere på ubuntu. Der funker alt bra :'(
+    */
+   // videoController.loadVideo("askepott");
 
     /* draw setup */
-   // size(1280, 544, P2D);
+  //  size(560, 406, P2D);
     fullScreen(P2D);
-   // frameRate(30);
-    background(0);
+ //   background(0);
+ //   noStroke();
+ //   fill(102);
+  //  frameRate(30);
 }
 
 void draw() {
+  background(0);
   if (videoController.isVideoPlaying()){
-    if(audioController.isAlbumPlaying()){
+    /*if(audioController.isAlbumPlaying()){
       audioController.stopRewAlbum();
-    }
-  //  if(videoController.isVideoPlaying()){
-  //      videoController.stopRewVideo();
-  //  }
+    }*/
     if (activeVideo.available()) {
       activeVideo.read();
     }
@@ -68,39 +100,61 @@ void serialEvent(Serial serialPort){
         if(serialInput == null) {
             return;
         }
-
+        if(serialInput != null) {
         serialInput = trim(serialInput);
-
+        println(serialInput);
+        }
+        
         switch (serialInput) {
+          
             // beethoven sym9
-            case "60B916A4":
+            case "04E45D31742380":
                 audioController.loadAlbum("symphony");
                 break;
 
-            // for emma
-            case "604275A3":
-                audioController.loadAlbum("foremma");
-                break;
-
             // La Dolche
-            case "F05BB556":
-                audioController.loadAlbum("ladolche");
-                break;
+            case "04E45C31742380":
+              videoController.stopCurrentMPlaying();
+              audioController.stopCurrentAFromPlaying();
+              
+              audioController.loadAlbum("ladolche");
+              break;
 
-            case "D632BBAC":
-                videoController.loadVideo("snatched"); //framerate = 24 (I think its 25), size: 1280, 544
-                break;
+            case "04E46C31742380":
+              videoController.stopCurrentMPlaying();
+              audioController.stopCurrentAFromPlaying();
+              
+              videoController.loadVideo("askepott"); //size: 1280, 544
+              break;
 
-            case "265C9FAC":
-                videoController.loadVideo("shameless");
-                break;       
+            case "04329639742380":
+              videoController.stopCurrentMPlaying();
+              audioController.stopCurrentAFromPlaying();
+              
+              videoController.loadVideo("herman");
+              break;
+                
+            case "04329739742380":
+              videoController.stopCurrentMPlaying();
+              audioController.stopCurrentAFromPlaying();
+              
+              videoController.loadVideo("annie");
+              break;
+            
+            case "04E46D31742380":
+              videoController.stopCurrentMPlaying();
+              audioController.stopCurrentAFromPlaying();
+              
+              videoController.loadVideo("havfruen");
+              break;
 
             case "pauseStopp":
-         //   if(videoController.isVideoPlaying()){
-        //    videoController.
-              //pauseFilm
-            //  audioController.activeAlbum = null;
-        //    }
+                //pause movie
+                if(videoController.isVideoPlaying()){
+                    videoController.pauseVideo();
+                } else {
+                  videoController.playVideo();
+                }
                 if(audioController.isAlbumPlaying()) {
                     audioController.pauseSong();
                 } else {
@@ -109,13 +163,31 @@ void serialEvent(Serial serialPort){
                 break;
 
             case "fremover":
+            if(audioController.isAlbumPlaying()){
                 audioController.nextSong();
-                break;
+                println("fremover");
+            }
+                
+            if(videoController.isVideoPlaying()){
+              videoController.fastForward();
+            }
+            break;
             
             case "bakover":
                 audioController.prevSong();
+                println("bakover");
+                
+                if(videoController.isVideoPlaying()){
+                    videoController.fastBackwards();
+                }
                 break;
-        
+                
+              /*  case "604275A3":
+                  videoController.stopCurrentMPlaying();
+                  audioController.stopCurrentAFromPlaying();
+                  setup();
+                  
+                  break; */
         }
     }
 }
@@ -124,6 +196,7 @@ public class VideoController {
     private boolean modeVideoPlaying;
     //private String videoPath;
     private PApplet appParent;
+
 
     public VideoController(PApplet parent) {
         appParent = parent;
@@ -134,16 +207,33 @@ public class VideoController {
         println(videoName);
         
          switch (videoName.toLowerCase()) {
-            case "shameless":
-                activeVideo = new Movie(appParent, "video/shameless.mkv");
+            case "askepott":
+                //activeVideo = new GLMovie(appParent, "video/askepott.mp4");
+                activeVideo = askepottVideo;
                 break;
                 
-            case "snatched":
-              activeVideo = new Movie(appParent, "video/snatched.mp4");
-                break;
+            case "herman":
+              //activeVideo = new GLMovie(appParent, "video/herman.mp4");
+              activeVideo = hermanVideo;
+              break;
+                
+            case "annie":
+              //activeVideo = new GLMovie(appParent, "video/annie.mp4");
+              activeVideo = annieVideo;
+              break;
+              
+            case "havfruen":
+            //activeVideo = new GLMovie(appParent, "video/lilleHavfruen.m4v");
+            activeVideo = havfrueVideo;
+            break;
+            
+            case "olsen":
+            //activeVideo = new GLMovie(appParent, "video/olsenbandenJrGUV.mp4");
+//            activeVideo = olsenVideo;
+            break;
          }
                 
-    //    activeVideo = new GLMovie(appParent, "video/Shameless.mkv");
+    //    activeVideo = new Movie(appParent, "video/Shameless.mkv");
         playVideo();
 
     }
@@ -153,8 +243,8 @@ public class VideoController {
             println("no video!");
             return;
         }
+       
         activeVideo.play();
-        //activeVideo.playbin.setVolume(1);
         modeVideoPlaying = true;  
     }
 
@@ -170,9 +260,49 @@ public class VideoController {
 
     public void stopRewVideo() {
         if(activeVideo != null){
-         //   pauseVideo();
-            activeVideo.stop();
+           pauseVideo();
+           float time = activeVideo.time();
+           time = 0.000;
+           activeVideo.jump(time);
+           activeVideo = null;
         }
+    }
+    
+    public void fastForward(){
+       float sec = second();
+       sec = 100.0;
+       float time = activeVideo.time();
+       time = time+sec;
+       activeVideo.jump(time);
+    }
+    
+    public void fastBackwards(){
+       float sec = second();
+       sec = -100.0;
+       float time = activeVideo.time();
+       time = time+sec;
+       activeVideo.jump(time); 
+    }
+    
+    public void setVolume(String volumeValue){
+   //   if(activeVideo != null){
+        
+        switch (volumeValue.toLowerCase()) {
+            case "99":
+                activeVideo.volume(1.0);
+                break;
+        
+      }
+    }
+    
+    /*function so that movies does not play on top of each other*/
+    public void stopCurrentMPlaying(){
+      if(videoController.isVideoPlaying()){
+        videoController.stopRewVideo();
+      }
+      if(modeVideoPlaying == false){
+        videoController.stopRewVideo();
+      }
     }
 
     /* helper functions */
@@ -217,31 +347,16 @@ public class AudioController {
                 activeAlbum[2] = minim.loadFile("Sym9/03 Adagio Molto E Cantabile.mp3");
                 activeAlbum[3] = minim.loadFile("Sym9/04 Presto - Allegro Ma Non Tr.mp3");
                 break;
-            
-            case "foremma":
-                /* Bon Iver For Emma, Forever Ago */
-                activeAlbumMaxTrack = 9;
-                activeAlbum = new AudioPlayer[activeAlbumMaxTrack];
-                activeAlbum[0] = minim.loadFile("ForEmma/01 Flume.mp3");
-                activeAlbum[1] = minim.loadFile("ForEmma/02 Lump Sum.mp3");
-                activeAlbum[2] = minim.loadFile("ForEmma/03 Skinny Love.mp3");
-                activeAlbum[3] = minim.loadFile("ForEmma/04 The Wolves (Act I and II).mp3");
-                activeAlbum[4] = minim.loadFile("ForEmma/05 Blindsided.mp3");
-                activeAlbum[5] = minim.loadFile("ForEmma/06 Creature Fear.mp3");
-                activeAlbum[6] = minim.loadFile("ForEmma/07 Team.mp3");
-                activeAlbum[7] = minim.loadFile("ForEmma/08 For Emma.mp3");
-                activeAlbum[8] = minim.loadFile("ForEmma/09 Re Stacks.mp3");
-                break;
 
             case "ladolche":
             /* LaDolche album fra NB's egen samling*/
-                activeAlbumMaxTrack = 14;
-                activeAlbum = new AudioPlayer[activeAlbumMaxTrack];
+                activeAlbumMaxTrack = 4;
+                activeAlbum = new AudioPlayer[activeAlbumMaxTrack]; 
                 activeAlbum[0] = minim.loadFile("LaDolche/01 Miko Mission-TocTocToc.mp3");
                 activeAlbum[1] = minim.loadFile("LaDolche/02 Scotch-Penguin Invasion.mp3");
                 activeAlbum[2] = minim.loadFile("LaDolche/03 Ryan Paris - Dolce Vita.mp3");
                 activeAlbum[3] = minim.loadFile("LaDolche/04 MY MINE - HYPNOTIC TANGO.mp3");
-                activeAlbum[4] = minim.loadFile("LaDolche/05 Scotch - Mirage.mp3");
+           /*     activeAlbum[4] = minim.loadFile("LaDolche/05 Scotch-Mirage.mp3");
                 activeAlbum[5] = minim.loadFile("LaDolche/06 Brian Ice - Night Girl.mp3");
                 activeAlbum[6] = minim.loadFile("LaDolche/07 Camaros Gang - Ali Shuffle.mp3");
                 activeAlbum[7] = minim.loadFile("LaDolche/08 Eddy Huntington - USSR.mp3");
@@ -250,7 +365,7 @@ public class AudioController {
                 activeAlbum[10] = minim.loadFile("LaDolche/11 DEN HARROW  -  TASTE OF LOVE.mp3");
                 activeAlbum[11] = minim.loadFile("LaDolche/12 Modern Talking - Youre My Heart, Youre My Soul.mp3");
                 activeAlbum[12] = minim.loadFile("LaDolche/13 Eddy Huntington - Up And Down.mp3");
-                activeAlbum[13] = minim.loadFile("LaDolche/14 Grant Miller - Colder than Ice.mp3");
+                activeAlbum[13] = minim.loadFile("LaDolche/14 Grant Miller - Colder than Ice.mp3"); */
                 break;
         }
         playSong();
@@ -327,8 +442,40 @@ public class AudioController {
         if(activeAlbum != null) {
             pauseSong();
             activeAlbum[activeAlbumTrack-1].rewind();
+            activeAlbum = null;
         }
     }
+    
+    public void stopCurrentAFromPlaying(){
+       if(audioController.isAlbumPlaying()){
+         audioController.stopRewAlbum();
+       }
+    }
+/*    
+    public void setVolume(String volumeValue){
+      if(activeAlbum != null){
+        
+        switch (volumeValue.toLowerCase()) {
+            case "99":
+                volume();
+                break;
+        }
+      }
+    } */
+    
+   /* Lag volum funksjon. Her fra GLvideo bibl.:  
+   
+   *  Changes the volume of the video's audio track, if there is one.
+   *  @param vol (0.0 is mute, 1.0 is 100%)
+
+  public void volume(float vol) {
+    if (handle != 0) {
+      if (!gstreamer_setVolume(handle, vol)) {
+        System.err.println("Cannot set volume to to " + vol);
+      }
+    }
+  }
+ */
 
     /* helper functions */
     /* checks if album SHOULD be playing, not if it actually is, for that use minim's isPlaying() */
