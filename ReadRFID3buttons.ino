@@ -4,8 +4,20 @@
  *
  * version 0.2
  */
+
 #include <SPI.h>
 #include <MFRC522.h>
+#include <TimerOne.h>
+#include <Volume3.h>
+
+/* define pin numbers for RGB LED  */
+const int RED_LED_PIN = A5;
+const int GREEN_LED_PIN = A4;
+const int BLUE_LED_PIN = A3;
+
+/*Setting brightness of green pin* 100% = 255, 75% = 191, 50% = 127, 25% = 64 */
+int green_bright = 191;
+
 
 /* define pin numbers */
 constexpr uint8_t RST_PIN = 9;
@@ -20,13 +32,15 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 MFRC522::MIFARE_Key key; 
 
 /* byte array that will hold the rfid */
-byte nuidPICC[4] = {0xFF};
+byte nuidPICC[7] = {0xFF};
 
 void setup()
 {
   Serial.begin(9600);
   SPI.begin();
   rfid.PCD_Init();
+  /*Start green light when system is ready to read rfid*/
+  analogWrite(GREEN_LED_PIN, green_bright);
 
   /* initialize the pushbutton pin as an inputs */
   pinMode(BAKOVER_PIN,INPUT);
@@ -39,6 +53,8 @@ void loop()
   check_buttons();
 
   read_rfid();
+
+  setVolume();
 
 }
 
@@ -54,11 +70,18 @@ void read_rfid()
     return;
   }
 
-  for (byte i = 0; i < 4; i++) {
+  for (byte i = 0; i < 7; i++) {
     nuidPICC[i] = rfid.uid.uidByte[i];
   }
 
   printHex(rfid.uid.uidByte, rfid.uid.size);
+
+  /*Red pin blinks whenever rfid card has been read*/
+  analogWrite(GREEN_LED_PIN, 0);
+    delay(300);
+  analogWrite(GREEN_LED_PIN, green_bright);
+    delay(300);
+ 
   Serial.println();
   
   rfid.PICC_HaltA();
@@ -83,6 +106,14 @@ void check_buttons()
   }
 }
 
+void setVolume()
+{
+   int val;
+   val = analogRead(A0);
+   Serial.println(map(val, 0, 1023, 0, 100));
+   delay(100);  
+}
+
 void printHex(byte *buffer, byte bufferSize)
 {
   for (byte i = 0; i < bufferSize; i++) {
@@ -90,4 +121,3 @@ void printHex(byte *buffer, byte bufferSize)
     Serial.print(buffer[i], HEX);
   }
 }
-
